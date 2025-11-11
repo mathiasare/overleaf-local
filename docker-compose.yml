@@ -1,0 +1,64 @@
+version: "3.9"
+
+name: overleaf
+
+services:
+  mongo:
+    image: mongo:8.2.1
+    container_name: mongo
+    command:
+      - --replSet
+      - overleaf
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+        test: echo 'db.stats().ok' | mongosh localhost:27017/test --quiet
+        interval: 10s
+        timeout: 10s
+        retries: 5
+
+  redis:
+    image: redis:7.4
+    container_name: redis
+    command: redis-server --appendonly yes
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  sharelatex:
+    image: sharelatex/sharelatex:6.0.0
+    container_name: sharelatex
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: always
+    stop_grace_period: 1m
+    environment:
+      EMAIL_CONFIRMATION_DISABLED: "true"
+      ENABLE_CONVERSIONS: "true"
+      ENABLED_LINKED_FILE_TYPES: project_file,project_output_file
+      EXTERNAL_AUTH: none
+      GIT_BRIDGE_ENABLED: "false"
+      OVERLEAF_APP_NAME: MTHSR Overleaf
+      OVERLEAF_EMAIL_FROM_ADDRESS: team@mthsr.com
+      OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex
+      OVERLEAF_REDIS_HOST: redis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      V1_HISTORY_URL: http://sharelatex:3100/api
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 80
+        published: "8888"
+        protocol: tcp
+    volumes:
+      - overleaf_data:/var/lib/overleaf
+
+volumes:
+  mongo_data:
+  redis_data:
+  overleaf_data:
