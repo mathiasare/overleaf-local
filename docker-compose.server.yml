@@ -12,7 +12,6 @@ services:
     restart: always
     volumes:
       - mongo_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     healthcheck:
         test: echo 'db.stats().ok' | mongosh localhost:27017/test --quiet
         interval: 10s
@@ -51,7 +50,11 @@ services:
       REDIS_PORT: "6379"
       V1_HISTORY_URL: http://sharelatex:3100/api
     ports:
-      - "80:80"
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 80
+        published: "8888"
+        protocol: tcp
     volumes:
       - overleaf_data:/var/lib/overleaf
 
